@@ -7,6 +7,10 @@ pragma solidity 0.8.12;
 /// @author Roger Wu (https://github.com/roger-wu) & petdomaa100 (https://github.com/petdomaa100)
 /// @dev An interface for a dividend-paying ERC-721 contract.
 interface IERC721DividendPaying {
+	/// @notice View the amount of total ether that was send for distribution.
+	/// @return The amount of total ether that was send for distribution.
+	function vault() external view returns(uint256);
+
 	/// @notice View the amount of dividend in wei that an address can withdraw.
 	/// @param owner The address of a token holder.
 	/// @return The amount of dividend in wei that `owner` can withdraw.

@@ -8,6 +8,7 @@ import "./IERC721DividendPaying.sol";
 
 contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 	uint256 private _totalSupply;
+	uint256 private _vault;
 	uint256 private _dividendPerShare;
 
 	mapping(address => int256) private _dividendCorrections;
@@ -25,12 +26,13 @@ contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 
 		if (msg.value > 0) {
 			_dividendPerShare += msg.value / totalSupply();
+			_vault += msg.value;
 
 			emit DividendsDistributed(_msgSender(), msg.value);
 		}
 	}
 
-	function withdrawDividend() public {
+	function withdrawDividend() external {
 		uint256 withdrawableDividend = withdrawableDividendOf(_msgSender());
 
 		if (withdrawableDividend > 0) {
@@ -40,6 +42,8 @@ contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 
 			(bool success, ) = payable(_msgSender()).call{ value: withdrawableDividend }("");
 			require(success, "ERC721DividentPaying: failed to transfer withdrawable dividend");
+
+			_vault -= withdrawableDividend;
 		}
 	}
 
@@ -65,6 +69,10 @@ contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 		return _withdrawnDividends[owner];
 	}
 
+	function vault() public view returns(uint256) {
+		return _vault;
+	}
+
 	function totalSupply() public view returns(uint256) {
 		return _totalSupply;
 	}
@@ -75,7 +83,9 @@ contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 
 		_totalSupply++;
 
-		_dividendCorrections[to] -= int256(_dividendPerShare);
+		if (_dividendPerShare > 0) {
+			_dividendCorrections[to] -= int256(_dividendPerShare);
+		}
 	}
 
 	function _burn(uint256 tokenID) internal override {
@@ -85,16 +95,20 @@ contract ERC721DividentPaying is ERC721, IERC721DividendPaying {
 
 		_totalSupply--;
 
-		_dividendCorrections[owner] += int256(_dividendPerShare);
+		if (_dividendPerShare > 0) {
+			_dividendCorrections[owner] += int256(_dividendPerShare);
+		}
 	}
 
 	function _transfer(address from, address to, uint256 tokenID) internal override {
 		super._transfer(from, to, tokenID);
 
-		int256 correction = int256(_dividendPerShare);
+		if (_dividendPerShare > 0) {
+			int256 correction = int256(_dividendPerShare);
 
-		_dividendCorrections[from] += correction;
-		_dividendCorrections[to] -= correction;
+			_dividendCorrections[from] += correction;
+			_dividendCorrections[to] -= correction;
+		}
 	}
 
 
